@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import apiClient from '@/lib/api-client';
+// import apiClient from '@/lib/api-client';
 import { Loader2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -11,13 +11,18 @@ export function AnalysisForm({ onAnalysisComplete }: { onAnalysisComplete: (data
 
     const mutation = useMutation({
         mutationFn: async (text: string) => {
-            console.log('AnalysisForm: Starting API call to /analyze with query:', text);
+            console.log('AnalysisForm: Starting local analysis for:', text);
+            // Simulate network delay for better UX
+            await new Promise(resolve => setTimeout(resolve, 800));
+
             try {
-                const { data } = await apiClient.post('/analyze', { query: text });
-                console.log('AnalysisForm: API call successful, data received:', data);
+                // Dynamically import to ensure client-side execution
+                const { analyzeQueryLocal } = await import('@/lib/local-analyzer');
+                const data = analyzeQueryLocal(text);
+                console.log('AnalysisForm: Local analysis complete:', data);
                 return data;
             } catch (error) {
-                console.error('AnalysisForm: API call failed:', error);
+                console.error('AnalysisForm: Local analysis failed:', error);
                 throw error;
             }
         },

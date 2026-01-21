@@ -4,12 +4,13 @@ import { redis } from '@/lib/redis';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
 const QuerySchema = z.object({
     query: z.string().min(3).max(500),
 });
+
+export async function GET() {
+    return NextResponse.json({ status: 'ok', service: 'intent-analyzer' });
+}
 
 export async function POST(request: Request) {
     console.log('API /api/analyze: Request received');
@@ -40,6 +41,10 @@ export async function POST(request: Request) {
             const prompt = `Analyze the search intent for: "${query}". Return a valid JSON object (no markdown formatting) with the following fields: intent_type, confidence(High/Medium/Low), user_goal, content_suggestions(array of strings), keywords(array of strings), seo_priority(High/Medium/Low).`;
 
             try {
+                // Initialize AI client lazily
+                const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
                 const result = await model.generateContent(prompt);
                 const response = await result.response;
                 let text = response.text();

@@ -11,7 +11,7 @@ export function AnalysisForm({ onAnalysisComplete }: { onAnalysisComplete: (data
 
     const mutation = useMutation({
         mutationFn: async (text: string) => {
-            const { data } = await apiClient.post('/intent/analyze', { query: text });
+            const { data } = await apiClient.post('/analyze', { query: text });
             return data;
         },
         onSuccess: (data) => {
@@ -33,7 +33,7 @@ export function AnalysisForm({ onAnalysisComplete }: { onAnalysisComplete: (data
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Enter a search query to analyze..."
-                    className="w-full px-6 py-4 text-lg border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none pr-12"
+                    className="w-full px-6 py-4 text-lg text-gray-900 bg-white border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none pr-12"
                     disabled={mutation.isPending}
                 />
                 <button

@@ -14,7 +14,13 @@ export async function GET() {
 
 export async function POST(request: Request) {
     console.log('API /api/analyze: Request received');
-    console.log('API /api/analyze: GOOGLE_API_KEY present?', !!process.env.GOOGLE_API_KEY);
+    const key = process.env.GOOGLE_API_KEY;
+    console.log('API /api/analyze: Env Var Check:', {
+        HAS_GOOGLE_KEY: !!key,
+        KEY_PREFIX: key ? key.substring(0, 10) + '...' : 'MISSING',
+        HAS_REDIS: !!process.env.UPSTASH_REDIS_REST_URL,
+        HAS_POSTGRES: !!process.env.POSTGRES_URL
+    });
     try {
         const body = await request.json();
         const { query } = QuerySchema.parse(body);

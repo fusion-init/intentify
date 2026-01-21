@@ -17,8 +17,16 @@ export async function POST(request: Request) {
         const { query } = QuerySchema.parse(body);
         const queryHash = Buffer.from(query).toString('base64');
 
-        // 1. Check Redis Cache
-        const cachedResult = await redis.get(`intent:${queryHash}`);
+        // 1. Check Redis Cache (Optional)
+        let cachedResult;
+        try {
+            if (process.env.UPSTASH_REDIS_REST_URL) {
+                cachedResult = await redis.get(`intent:${queryHash}`);
+            }
+        } catch (e) {
+            console.warn("Redis Cache Error (Ignored):", e);
+        }
+
         if (cachedResult) {
             return NextResponse.json({ ...cachedResult as object, source: 'cache' });
         }
@@ -38,14 +46,13 @@ export async function POST(request: Request) {
                 text = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
                 analysisResult = JSON.parse(text);
-            } catch (e) {
+            } catch (e: any) {
                 console.error("AI Parse Error:", e);
-                analysisResult = {
-                    intent_type: "General Research",
-                    confidence: "Low",
-                    user_goal: "Understand topic",
-                    keywords: query.split(" ")
-                };
+                // Return actual error if AI fails
+                return NextResponse.json(
+                    { error: `AI Processing Failed: ${e.message || 'Unknown error'}` },
+                    { status: 500 }
+                );
             }
 
         } else {
@@ -61,21 +68,33 @@ export async function POST(request: Request) {
             };
         }
 
-        // 3. Save to History
-        await sql`
-      INSERT INTO query_history (query_text, intent_type, confidence, result)
-      VALUES (${query}, ${analysisResult.intent_type}, ${analysisResult.confidence}, ${JSON.stringify(analysisResult)})
-    `;
+        // 3. Save to History (Optional)
+        try {
+            if (process.env.POSTGRES_URL) {
+                await sql`
+                  INSERT INTO query_history (query_text, intent_type, confidence, result)
+                  VALUES (${query}, ${analysisResult.intent_type}, ${analysisResult.confidence}, ${JSON.stringify(analysisResult)})
+                `;
+            }
+        } catch (e) {
+            console.warn("Database Save Error (Ignored):", e);
+        }
 
-        // 4. Cache Result
-        await redis.set(`intent:${queryHash}`, analysisResult, { ex: 3600 });
+        // 4. Cache Result (Optional)
+        try {
+            if (process.env.UPSTASH_REDIS_REST_URL) {
+                await redis.set(`intent:${queryHash}`, analysisResult, { ex: 3600 });
+            }
+        } catch (e) {
+            console.warn("Redis Set Error (Ignored):", e);
+        }
 
         return NextResponse.json({ ...analysisResult, source: 'api' });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Analysis Error:", error);
         return NextResponse.json(
-            { error: 'Failed to analyze query' },
+            { error: `Critical Failure: ${error.message || JSON.stringify(error)}` },
             { status: 500 }
         );
     }

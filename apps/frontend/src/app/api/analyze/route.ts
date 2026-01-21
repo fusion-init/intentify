@@ -22,7 +22,7 @@ export async function POST(request: Request) {
         // 1. Check Redis Cache (Optional)
         let cachedResult;
         try {
-            if (process.env.UPSTASH_REDIS_REST_URL) {
+            if (redis && process.env.UPSTASH_REDIS_REST_URL) {
                 cachedResult = await redis.get(`intent:${queryHash}`);
             }
         } catch (e) {
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
 
         // 4. Cache Result (Optional)
         try {
-            if (process.env.UPSTASH_REDIS_REST_URL) {
+            if (redis && process.env.UPSTASH_REDIS_REST_URL) {
                 await redis.set(`intent:${queryHash}`, analysisResult, { ex: 3600 });
             }
         } catch (e) {

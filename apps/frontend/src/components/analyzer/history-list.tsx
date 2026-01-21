@@ -26,7 +26,7 @@ export function HistoryList() {
     const { data: history, isLoading } = useQuery({
         queryKey: ['history'],
         queryFn: async () => {
-            const { data } = await apiClient.get('/intent/history');
+            const { data } = await apiClient.get('/history');
             return data;
         },
         refetchInterval: 5000 // Refresh every 5s

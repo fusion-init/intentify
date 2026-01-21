@@ -11,17 +11,34 @@ export function AnalysisForm({ onAnalysisComplete }: { onAnalysisComplete: (data
 
     const mutation = useMutation({
         mutationFn: async (text: string) => {
-            const { data } = await apiClient.post('/analyze', { query: text });
-            return data;
+            console.log('AnalysisForm: Starting API call to /analyze with query:', text);
+            try {
+                const { data } = await apiClient.post('/analyze', { query: text });
+                console.log('AnalysisForm: API call successful, data received:', data);
+                return data;
+            } catch (error) {
+                console.error('AnalysisForm: API call failed:', error);
+                throw error;
+            }
         },
         onSuccess: (data) => {
+            console.log('AnalysisForm: Mutation onSuccess triggered');
             onAnalysisComplete(data);
         },
+        onError: (error) => {
+            console.error('AnalysisForm: Mutation onError triggered:', error);
+            // Optionally set some local error state here if UI needs to show it
+            alert('Analysis failed. Please check console for details.');
+        }
     });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!query.trim()) return;
+        console.log('AnalysisForm: Form submitted. Query:', query);
+        if (!query.trim()) {
+            console.warn('AnalysisForm: Query is empty, aborting.');
+            return;
+        }
         mutation.mutate(query);
     };
 

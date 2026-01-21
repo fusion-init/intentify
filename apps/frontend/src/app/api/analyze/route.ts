@@ -12,6 +12,8 @@ const QuerySchema = z.object({
 });
 
 export async function POST(request: Request) {
+    console.log('API /api/analyze: Request received');
+    console.log('API /api/analyze: GOOGLE_API_KEY present?', !!process.env.GOOGLE_API_KEY);
     try {
         const body = await request.json();
         const { query } = QuerySchema.parse(body);

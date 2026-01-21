@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
-import { redis } from '@/lib/redis';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
 
@@ -21,6 +19,7 @@ export async function POST(request: Request) {
         HAS_REDIS: !!process.env.UPSTASH_REDIS_REST_URL,
         HAS_POSTGRES: !!process.env.POSTGRES_URL
     });
+
     try {
         const body = await request.json();
         const { query } = QuerySchema.parse(body);
@@ -29,8 +28,12 @@ export async function POST(request: Request) {
         // 1. Check Redis Cache (Optional)
         let cachedResult;
         try {
-            if (redis && process.env.UPSTASH_REDIS_REST_URL) {
-                cachedResult = await redis.get(`intent:${queryHash}`);
+            if (process.env.UPSTASH_REDIS_REST_URL) {
+                // Dynamic Import: Only load Redis if env var exists
+                const { redis } = await import('@/lib/redis');
+                if (redis) {
+                    cachedResult = await redis.get(`intent:${queryHash}`);
+                }
             }
         } catch (e) {
             console.warn("Redis Cache Error (Ignored):", e);
@@ -61,7 +64,6 @@ export async function POST(request: Request) {
                 analysisResult = JSON.parse(text);
             } catch (e: any) {
                 console.error("AI Parse Error:", e);
-                // Return actual error if AI fails
                 return NextResponse.json(
                     { error: `AI Processing Failed: ${e.message || 'Unknown error'}` },
                     { status: 500 }
@@ -84,6 +86,8 @@ export async function POST(request: Request) {
         // 3. Save to History (Optional)
         try {
             if (process.env.POSTGRES_URL) {
+                // Dynamic Import: Only load SQL if env var exists
+                const { sql } = await import('@vercel/postgres');
                 await sql`
                   INSERT INTO query_history (query_text, intent_type, confidence, result)
                   VALUES (${query}, ${analysisResult.intent_type}, ${analysisResult.confidence}, ${JSON.stringify(analysisResult)})
@@ -95,8 +99,11 @@ export async function POST(request: Request) {
 
         // 4. Cache Result (Optional)
         try {
-            if (redis && process.env.UPSTASH_REDIS_REST_URL) {
-                await redis.set(`intent:${queryHash}`, analysisResult, { ex: 3600 });
+            if (process.env.UPSTASH_REDIS_REST_URL) {
+                const { redis } = await import('@/lib/redis');
+                if (redis) {
+                    await redis.set(`intent:${queryHash}`, analysisResult, { ex: 3600 });
+                }
             }
         } catch (e) {
             console.warn("Redis Set Error (Ignored):", e);

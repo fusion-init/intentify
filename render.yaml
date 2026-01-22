@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: intentify-backend
+    env: node
+    plan: free
+    # Explicitly build dependencies in order, matching the Dockerfile strategy
+    buildCommand: npm install && npm run build --workspace=packages/types --if-present && npm run build --workspace=packages/utils --if-present && npm run build --workspace=apps/backend
+    startCommand: npm run start:prod --workspace=apps/backend
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0

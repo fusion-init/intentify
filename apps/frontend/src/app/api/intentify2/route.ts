@@ -4,31 +4,36 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
 
-        // Proxy to NestJS Backend
-        // Assuming Backend is running on localhost:3001 or similar.
-        // In a real environment, this should be an env var.
+        // SINGLE SOURCE OF TRUTH: BASE_API_PATH = "/intentify"
+        // Ensure this matches the backend controller.
         const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
-        const res = await fetch(`${BACKEND_URL}/intentify2/analyze`, {
+        // Correct Path: /intentify/analyze
+        const targetUrl = `${BACKEND_URL}/intentify/analyze`;
+
+        const res = await fetch(targetUrl, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
 
-        if (!res.ok) {
-            const text = await res.text();
-            return NextResponse.json({ error: `Backend Error: ${text}` }, { status: res.status });
-        }
-
         const data = await res.json();
-        return NextResponse.json(data);
+
+        // Pass through status code from backend
+        return NextResponse.json(data, { status: res.status });
+
     } catch (error: any) {
-        console.error('Proxy Error:', error);
+        // FAIL SAFE PROXY ERROR
+        console.error('[Proxy Error] Request failed:', error);
+
         return NextResponse.json(
-            { error: `Proxy Failed: ${error.message}` },
-            { status: 500 }
+            {
+                success: false,
+                error_code: 'PROXY_CONNECTION_ERROR',
+                message: 'Unable to connect to Intentify Backend. Please ensure the server is running on port 3001.',
+                debug: error.message
+            },
+            { status: 503 } // Service Unavailable
         );
     }
 }

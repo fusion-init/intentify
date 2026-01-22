@@ -99,7 +99,10 @@ export function AnalysisForm({ onAnalysisComplete }: { onAnalysisComplete: (data
                 </div>
             </div>
             {version === 'v2' && (
-                <p className="text-center text-xs text-blue-600 font-medium">✨ Powered by Intentify 2.0 Rule Engine</p>
+                <div className="flex justify-between items-center px-2 mt-2">
+                    <p className="text-xs text-blue-600 font-medium">✨ Powered by Intentify 2.0 Rule Engine</p>
+                    {statusMessage && <p className="text-xs text-red-500 font-semibold">{statusMessage}</p>}
+                </div>
             )}
         </form>
     );

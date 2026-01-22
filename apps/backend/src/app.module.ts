@@ -5,6 +5,8 @@ import { IntentModule } from './modules/intent/intent.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AuthModule } from './modules/auth/auth.module';
 
+import { Intentify2Module } from './modules/intentify2/intentify2.module';
+
 @Module({
     imports: [
         ConfigModule.forRoot({
@@ -21,6 +23,7 @@ import { AuthModule } from './modules/auth/auth.module';
             synchronize: process.env.NODE_ENV !== 'production',
         }),
         IntentModule,
+        Intentify2Module,
         AnalyticsModule,
         AuthModule,
     ],

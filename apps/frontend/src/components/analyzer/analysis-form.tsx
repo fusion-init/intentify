@@ -9,52 +9,73 @@ import { cn } from '@/lib/utils';
 export function AnalysisForm({ onAnalysisComplete }: { onAnalysisComplete: (data: any) => void }) {
     const [query, setQuery] = useState('');
     const [version, setVersion] = useState<'v1' | 'v2'>('v1');
+    const [backendHealth, setBackendHealth] = useState<'ok' | 'down' | 'checking'>('checking');
+    const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+    // 1. HEALTH CHECK ON MOUNT
+    useState(() => {
+        const checkHealth = async () => {
+            try {
+                const res = await fetch('/api/health');
+                if (res.ok) {
+                    setBackendHealth('ok');
+                } else {
+                    setBackendHealth('down');
+                    setStatusMessage("Intentify Backend is currently unreachable.");
+                }
+            } catch (e) {
+                setBackendHealth('down');
+                setStatusMessage("Intentify Backend is offline.");
+            }
+        };
+        checkHealth();
+    });
 
     const mutation = useMutation({
         mutationFn: async (text: string) => {
             console.log(`AnalysisForm: Starting analysis (${version}) for:`, text);
+            setStatusMessage(null);
 
             if (version === 'v2') {
-                // Call Intentify 2.0 Backend
-                try {
-                    // Assuming proxy is set up or direct call. 
-                    // Using a relative path that we'll assume proxies to NestJS or we can use full URL if we knew it.
-                    // For now, let's assume we call a Next.js API route that we will creating momentarily to proxy to NestJS, 
-                    // OR we just use fetch to the likely backend port (usually 3000/3333).
-                    // Let's rely on a new Next.js API route to keep it clean: /api/intentify
+                if (backendHealth !== 'ok') {
+                    throw new Error("Backend is offline. Cannot perform analysis.");
+                }
 
+                try {
+                    // Call our Hardened Proxy
                     const response = await fetch('/api/intentify2', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ query: text })
                     });
 
-                    if (!response.ok) {
-                        throw new Error(`Backend error: ${response.statusText}`);
+                    const data = await response.json();
+
+                    // FRONTEND ERROR GUARD
+                    if (!data.success && !response.ok) {
+                        throw new Error(data.message || `Error ${data.error_code || 'UNKNOWN'}`);
                     }
 
-                    return await response.json();
-                } catch (error) {
+                    if (!data.success) {
+                        throw new Error(data.message || "Analysis failed due to invalid input.");
+                    }
+
+                    return data.data;
+                } catch (error: any) {
                     console.error('Intentify 2.0 Analysis failed:', error);
                     throw error;
                 }
             } else {
                 // v1: Local Logic
                 await new Promise(resolve => setTimeout(resolve, 800));
-                try {
-                    const { analyzeQueryLocal } = await import('@/lib/local-analyzer');
-                    return analyzeQueryLocal(text);
-                } catch (error) {
-                    console.error('Local analysis failed:', error);
-                    throw error;
-                }
+                return (await import('@/lib/local-analyzer')).analyzeQueryLocal(text);
             }
         },
         onSuccess: (data) => {
             onAnalysisComplete(data);
         },
         onError: (error) => {
-            alert(`Analysis failed: ${error.message || 'Unknown error'}. Check console.`);
+            setStatusMessage(error.message || 'An unexpected error occurred.');
         }
     });
 
@@ -71,9 +92,16 @@ export function AnalysisForm({ onAnalysisComplete }: { onAnalysisComplete: (data
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder={version === 'v2' ? "Intentify 2.0: Enter query..." : "Enter a search query to analyze..."}
-                    className="w-full px-6 py-4 text-lg text-gray-900 bg-white border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none pr-32 transition-all"
-                    disabled={mutation.isPending}
+                    placeholder={
+                        backendHealth === 'down' && version === 'v2'
+                            ? "⚠ Backend Offline - Check Server"
+                            : version === 'v2' ? "Intentify 2.0: Enter query..." : "Enter a search query to analyze..."
+                    }
+                    className={cn(
+                        "w-full px-6 py-4 text-lg text-gray-900 bg-white border rounded-xl shadow-sm focus:outline-none pr-32 transition-all",
+                        backendHealth === 'down' && version === 'v2' ? "border-red-300 bg-red-50" : "focus:ring-2 focus:ring-blue-500"
+                    )}
+                    disabled={mutation.isPending || (version === 'v2' && backendHealth === 'down')}
                 />
 
                 {/* Search Button */}

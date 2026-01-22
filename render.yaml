@@ -3,9 +3,8 @@ services:
     name: intentify-backend
     env: node
     plan: free
-    # Removed explicit builds for packages/types and packages/utils as they appear to be missing.
-    # If you add them back later, you can restore the workspace build commands.
-    buildCommand: npm install && npm run build --workspace=apps/backend
+    # Added --include=dev to npm install because @nestjs/cli is a devDependency and Render defaults to production mode
+    buildCommand: npm install --include=dev && npm run build --workspace=apps/backend
     startCommand: npm run start:prod --workspace=apps/backend
     envVars:
       - key: NODE_VERSION

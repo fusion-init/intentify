@@ -3,8 +3,9 @@ services:
     name: intentify-backend
     env: node
     plan: free
-    # Explicitly build dependencies in order, matching the Dockerfile strategy
-    buildCommand: npm install && npm run build --workspace=packages/types --if-present && npm run build --workspace=packages/utils --if-present && npm run build --workspace=apps/backend
+    # Removed explicit builds for packages/types and packages/utils as they appear to be missing.
+    # If you add them back later, you can restore the workspace build commands.
+    buildCommand: npm install && npm run build --workspace=apps/backend
     startCommand: npm run start:prod --workspace=apps/backend
     envVars:
       - key: NODE_VERSION

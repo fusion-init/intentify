@@ -9,7 +9,7 @@ export async function POST(request: Request) {
         // In a real environment, this should be an env var.
         const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
-        const res = await fetch(`${BACKEND_URL}/api/intentify2/analyze`, {
+        const res = await fetch(`${BACKEND_URL}/intentify2/analyze`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
